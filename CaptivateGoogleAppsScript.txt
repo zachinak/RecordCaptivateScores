@@ -1,0 +1,97 @@
+// Usage
+//  1. Save your GAS Project
+//
+//  2. Click: Run > setup
+//
+//  3. Click: Publish > Deploy as web app 
+//    - enter Project Version Description (optional) 
+//    - set security level and enable service ( execute as 'me' and access 'anyone, even anonymously) 
+//
+//  4. Copy the 'Current web app URL' and paste it into the captivate JavaScript file (first line)
+//
+
+/*
+** Do Not Edit Below This Line **
+*/
+
+// Create a new property service to maintain variables accross instances.
+var SCRIPT_PROP = PropertiesService.getScriptProperties();
+
+// What to do when a when we recieve an HTTP GET request
+function doGet(e) {
+    // For this simple app we only need to do one thing.
+    return addUser(e.parameter['id'], e.parameter['course'], e.parameter['score'], e.parameter['email'])
+}
+
+// Add our user record. 
+function addUser(id, course, score, email) {
+    //Open the spreadsheet we set up by it's ID
+    var doc = SpreadsheetApp.openById(SCRIPT_PROP.getProperty("key"));
+    //Get the first sheet
+    var sheet = doc.getSheets()[0];
+    // we want a public lock, one that locks for all invocations
+    var lock = LockService.getPublicLock();
+    lock.waitLock(30000); // wait 30 seconds before conceding defeat.
+    
+    //wrap everything in a try/catch to handle errors
+    try {
+        var timeNow = new Date() //create a timestamp
+        var nextRow = sheet.getLastRow() + 1; // get next empty row
+        //create an array of data to put into the row
+        var row = [
+            [id, course, score, email, timeNow]
+        ];
+        //put the data into the row
+        sheet.getRange(nextRow, 1, 1, 5).setValues(row);
+ 
+ // ***** EMAIL TEST BELOW *****
+    var num11 = 2
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var emails = ss.getSheetByName('Emails');
+    var lastRow = sheet.getLastRow()
+    Logger.log(lastRow);
+    
+    // Begin loop
+    do {
+      var emailVar = emails.getRange(num11, 1).getValue();
+    Logger.log(emailVar);
+    var message = id +' completed the ' + course + ' Captivate Training with a score of ' + score + '.';
+    var subj = id + ' ' + course + ' Captivate';
+  MailApp.sendEmail({
+    to: emailVar,
+    name: "Institute for Community Alliances",
+    subject: subj,
+    body: message
+  });
+      Logger.log('email sent to: ' + emailVar)
+      num11++;
+    } while (num11 != lastRow+1);
+      
+// **** EMAIL TEST ABOVE ****
+
+    } catch (e) {   //something went wrong. Return an error
+        return ContentService.createTextOutput(JSON.stringify({
+            "result": "error",
+            "error": e
+        })).setMimeType(ContentService.MimeType.JSON);
+    } finally { //release lock
+        lock.releaseLock();
+    }
+}
+
+
+//Setup our spreadsheet
+function setup() {
+    //get the spreadsheet
+    var doc = SpreadsheetApp.getActiveSpreadsheet();
+    //save the spreadsheet's id for later 
+    SCRIPT_PROP.setProperty("key", doc.getId());
+    //get the first sheet
+    var sheet = doc.getSheets()[0];
+    //create an array of labels
+    var row = [
+        ["ID", "Course", "score", "email", "Timestamp"]
+    ];
+    //set the first row of the sheet to our labels
+    sheet.getRange(1, 1, 1, 5).setValues(row);
+}

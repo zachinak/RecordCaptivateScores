@@ -1,0 +1,30 @@
+//what is the URL of your google spreadsheet?
+var sheetURL ='https://script.google.com/macros/s/AKfycbw6L3y5aZkEtZvJfCwu6OjUnc0_n9y6_kmlFzBux3Y_0Y1EUXDk/exec';
+
+var scoreVarName = 'cpQuizInfoPointsscored'; //what is the name of the score varible in Captivate?
+var userVarName = 'userName'; //what is the name of the user name varible in Captivate?
+var topTenVarName = 'topTenMsg'; //what is the name of the top ten message varible in Captivate? might need to remove.
+var userVarEmail = 'userEmail'; //what is the name of the email variable in Captivate
+var courseName = 'cpInfoProjectName'; //what is the name of the captivate project variable?
+
+/*
+ *** Do not edit below this line unless you are confident about your JS skills. ***
+ */
+
+var userScore = window.cpAPIInterface.getVariableValue(scoreVarName);  //Get the score from the player
+var userTag = window.cpAPIInterface.getVariableValue(userVarName); //Get the user name from the player
+var course = window.cpAPIInterface.getVariableValue(courseName); // Get the course from the captivate
+var email = window.cpAPIInterface.getVariableValue(userVarEmail); // Get the email from the player
+
+window.cpAPIInterface.setVariableValue(topTenVarName, 'Loading...'); //Temporarily set the top ten message 
+var topTenMsg; //We will build the top ten message in this var. 
+
+//Set up our AJAX 
+var xhttp;
+if (window.XMLHttpRequest) {
+    xhttp = new XMLHttpRequest();
+} else {
+    xhttp = new ActiveXObject('Microsoft.XMLHTTP');
+}
+xhttp.open('GET', sheetURL + '?id=' + userTag + '&course=' + course + '&score=' + userScore + '&email=' + email, true);
+xhttp.send();
