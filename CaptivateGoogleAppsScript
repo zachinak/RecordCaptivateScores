@@ -1,4 +1,4 @@
-// Usage
+// Usage for new projects
 //  1. Save your GAS Project
 //
 //  2. Click: Run > setup
@@ -9,6 +9,7 @@
 //
 //  4. Copy the 'Current web app URL' and paste it into the captivate JavaScript file (first line)
 //
+// If you have issues, please feel free to reach out to Zach at 907-952-3055 (text or call) or zach.burgess@icalliances.org
 
 /*
 ** Do Not Edit Below This Line **
@@ -17,45 +18,60 @@
 // Create a new property service to maintain variables accross instances.
 var SCRIPT_PROP = PropertiesService.getScriptProperties();
 
-// What to do when a when we recieve an HTTP GET request
+// What to do when we recieve an HTTP GET request (the thing sent by the Javascript in Captivate)
 function doGet(e) {
-    // For this simple app we only need to do one thing.
+  
+  // For this simple app we only need to do one thing: grab the following fields from the data sent by captivate
+  // To correctly receive the data from these fields you must copy the names exactly
+  // If needing to add new fields, plan to use single,lowercase words for simplicity
     return addUser(e.parameter['id'], e.parameter['course'], e.parameter['score'], e.parameter['email'])
 }
 
-// Add our user record. 
+// The following function adds our user record to the spreadsheet using the data sent by captivate. 
 function addUser(id, course, score, email) {
     //Open the spreadsheet we set up by it's ID
     var doc = SpreadsheetApp.openById(SCRIPT_PROP.getProperty("key"));
-    //Get the first sheet
+    // The following line assigns the first sheet of our Captivate Trainings document to the variable "sheet"
     var sheet = doc.getSheets()[0];
     // we want a public lock, one that locks for all invocations
+    // some code that I think is necessary to make this API work.
     var lock = LockService.getPublicLock();
     lock.waitLock(30000); // wait 30 seconds before conceding defeat.
     
-    //wrap everything in a try/catch to handle errors
+    // wrap everything in a try/catch to handle errors. 
+    // Everything in the "try {}" curly braces is what the application will try to do. 
+    // Below the email test section is a "catch" with curly braces. If there is an error
+    // with the "try" code, the application will do whatever is in the "catch" code.
+  
     try {
-        var timeNow = new Date() //create a timestamp
-        var nextRow = sheet.getLastRow() + 1; // get next empty row
-        //create an array of data to put into the row
+        var timeNow = new Date() // assigns the current time and date to a variable
+        var nextRow = sheet.getLastRow() + 1; // Assigns the next empty row in the sheet to a variable
+      
+        // The below code creates an array of data to put into the row using the data from captivate and the timeNow variable.
         var row = [
             [id, course, score, email, timeNow]
         ];
-        //put the data into the row
+      
+        // The below code writes the data from the previous array into the selected row
         sheet.getRange(nextRow, 1, 1, 5).setValues(row);
  
  // ***** EMAIL TEST BELOW *****
-    var num11 = 2
+      // This section handles the email notificatoins. Google has restrictions on how many automatic emails can be sent in a day.
+      // So if the email is not sending, it may be because the capacity has been hit. Wait 24 hours and try again or use the
+      // quotaGet function to check how many emails are left. Documentation for quotaGet is at the bottom of this document.
+    var num11 = 2;
     var ss = SpreadsheetApp.getActiveSpreadsheet();
+      // The next two lines of code finds the sheet called "emails".
     var emails = ss.getSheetByName('Emails');
-    var lastRow = sheet.getLastRow()
-    Logger.log(lastRow);
+    emails.activate();
+    var lastRow = emails.getLastRow();
+    Logger.log('lastRow: ' + lastRow);
     
-    // Begin loop
+    // Begin loop to send emails to all emails listed on the emails tab
     do {
       var emailVar = emails.getRange(num11, 1).getValue();
     Logger.log(emailVar);
-    var message = id +' completed the ' + course + ' Captivate Training with a score of ' + score + '.';
+    var message = id +' completed the ' + course + ' Captivate Training with a score of ' + score + '. '+ email;
     var subj = id + ' ' + course + ' Captivate';
   MailApp.sendEmail({
     to: emailVar,
@@ -71,7 +87,7 @@ function addUser(id, course, score, email) {
 
     } catch (e) {   //something went wrong. Return an error
         return ContentService.createTextOutput(JSON.stringify({
-            "result": "error",
+            "result": "error1",
             "error": e
         })).setMimeType(ContentService.MimeType.JSON);
     } finally { //release lock
@@ -80,7 +96,7 @@ function addUser(id, course, score, email) {
 }
 
 
-//Setup our spreadsheet
+//Setup our spreadsheet. This is only for new projects.
 function setup() {
     //get the spreadsheet
     var doc = SpreadsheetApp.getActiveSpreadsheet();
@@ -94,4 +110,17 @@ function setup() {
     ];
     //set the first row of the sheet to our labels
     sheet.getRange(1, 1, 1, 5).setValues(row);
+}
+
+// To use the quotaGet function:
+// 1. Open the "Run" menu at the top of the Google script editor (probably this window).
+// 2. Select "quotaGet" from the "Run Function" sub-menu.
+// 3. Wait a few seconds for the function to run.
+// 4. Select "Logs" from the "View" menu above.
+// 5. A window should pop up that shows the "Remaining email quota".
+
+function quotaGet() {
+var emailQuotaRemaining = MailApp.getRemainingDailyQuota();
+Logger.log("Remaining email quota: " + emailQuotaRemaining);
+  
 }
